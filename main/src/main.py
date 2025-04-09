@@ -1,85 +1,119 @@
 import tkinter as tk
+from ttkbootstrap import Style
+from ttkbootstrap.constants import PRIMARY, SECONDARY
+from ttkbootstrap.widgets import Entry, Label, Button
 from PIL import Image, ImageTk
 import qrcode
-import qrcode.constants
+import json
+import os
 
-# Criar a janela principal
-root = tk.Tk()
-root.title("Qr_Generator")
-root.geometry("600x400")
+# Caminho do arquivo de config
+CONFIG_PATH = "config.json"
 
-# Variável global para a imagem e o widget da imagem
+# Carrega tema salvo ou define padrão
+def carregar_tema_salvo():
+    if os.path.exists(CONFIG_PATH):
+        with open(CONFIG_PATH, "r") as file:
+            dados = json.load(file)
+            return dados.get("tema", "flatly")  # flatly = claro
+    return "flatly"
+
+# Salva o tema atual no arquivo
+def salvar_tema(tema):
+    with open(CONFIG_PATH, "w") as file:
+        json.dump({"tema": tema}, file)
+
+# Tema inicial (flatly = claro / darkly = escuro)
+tema_atual = carregar_tema_salvo()
+style = Style(theme=tema_atual)
+
+# Janela principal
+root = style.master
+root.title("Gerador de QR Code")
+root.geometry("600x700")
+
+# Variáveis globais
 imagem_ref = None
 label_img = None
-
-# Variável de controle do campo de texto
 entrada_texto = tk.StringVar()
 
-# Função para gerar o QRCode 
-def qr_generator():
+# Função para gerar o QR Code
+def qr_generator(event=None):
     texto = entrada_texto.get()
 
     if not texto:
-        error_label.config(text="O texto não pode estar vazio!", fg="red")
+        error_label.config(text="O texto não pode estar vazio!")
         esconder_imagem()
         return
 
-    QR = qrcode.QRCode(
+    qr = qrcode.QRCode(
         version=1,
         error_correction=qrcode.constants.ERROR_CORRECT_L,
         box_size=5,
         border=4,
     )
-    QR.add_data(texto)
-    QR.make(fit=True)
+    qr.add_data(texto)
+    qr.make(fit=True)
 
-    img = QR.make_image(fill="black", back_color="white")
+    img = qr.make_image(fill="black", back_color="white")
     img.save("qr_code.png")
 
     error_label.config(text="")
     exibir_imagem()
 
-# Função para exibir a imagem
+# Mostrar imagem
 def exibir_imagem():
     global imagem_ref, label_img
 
-    imagem = Image.open("qr_code.png")
-    imagem = imagem.resize((200, 200))
+    imagem = Image.open("qr_code.png").resize((200, 200))
     imagem_ref = ImageTk.PhotoImage(imagem)
 
     if label_img is None:
-        label_img = tk.Label(root, image=imagem_ref)
-        label_img.place(relx=0.5, rely=0.7, anchor="center")
+        label_img = Label(root, image=imagem_ref)
+        label_img.place(relx=0.5, rely=0.75, anchor="center")
     else:
         label_img.configure(image=imagem_ref)
         label_img.image = imagem_ref
-        label_img.place(relx=0.5, rely=0.6, anchor="center")
+        label_img.place(relx=0.5, rely=0.75, anchor="center")
 
-# Função para esconder a imagem
+# Esconde a imagem
 def esconder_imagem():
-    global label_img
     if label_img:
         label_img.place_forget()
 
-# Função chamada sempre que o texto é alterado
+# Atualiza ao digitar
 def ao_digitar(*args):
-    texto = entrada_texto.get()
-    if not texto:
+    if not entrada_texto.get():
         esconder_imagem()
 
-# Conectar a função de digitação à variável de entrada
 entrada_texto.trace_add("write", ao_digitar)
 
-# Criar rótulos, campo de entrada e botão
-label = tk.Label(root, text="Gerar Codigo QR")
-input_entry = tk.Entry(root, textvariable=entrada_texto)
-button = tk.Button(root, text="Gerar Codigo QR", command=qr_generator)
-error_label = tk.Label(root, text="", fg="red")
+# Alternar tema claro/escuro
+def alternar_tema():
+    global tema_atual
+    novo = "darkly" if tema_atual == "flatly" else "flatly"
+    salvar_tema(novo)
+    style.theme_use(novo)
+    tema_atual = novo
 
-# Exibir na tela
-label.pack(pady=20)
-input_entry.pack(padx=7, pady=4)
-button.pack()
-error_label.pack(pady=10)
+# ===== Layout =====
+main_frame = tk.Frame(root, bg=style.colors.bg)
+main_frame.pack(expand=True)
+
+label = Label(main_frame, text="Gerador de Código QR", font=("Arial", 16))
+input_entry = Entry(main_frame, textvariable=entrada_texto, font=("Arial", 12), width=40)
+button = Button(main_frame, text="Gerar QR Code", command=qr_generator, bootstyle=PRIMARY)
+toggle_button = Button(main_frame, text="Alternar Tema", command=alternar_tema, bootstyle=SECONDARY)
+error_label = Label(main_frame, text="", font=("Arial", 10), foreground="red")
+
+# Posicionamento
+label.pack(pady=10)
+input_entry.pack(pady=6)
+button.pack(pady=4)
+toggle_button.pack(pady=4)
+error_label.pack(pady=6)
+
+# Atalho Enter ↵
+root.bind("<Return>", qr_generator)
 
 root.mainloop()
