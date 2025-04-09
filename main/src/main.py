@@ -8,20 +8,22 @@ root = tk.Tk()
 root.title("Qr_Generator")
 root.geometry("600x400")
 
-# Criar uma variável global para armazenar a imagem
+# Variável global para a imagem e o widget da imagem
 imagem_ref = None
+label_img = None
+
+# Variável de controle do campo de texto
+entrada_texto = tk.StringVar()
 
 # Função para gerar o QRCode 
 def qr_generator():
-    texto = input.get()
+    texto = entrada_texto.get()
 
-    # Verificar se o campo de texto está vazio
     if not texto:
-        # Exibir uma mensagem de alerta se o campo estiver vazio
         error_label.config(text="O texto não pode estar vazio!", fg="red")
-        return  # Não gerar o QR Code se o texto estiver vazio
+        esconder_imagem()
+        return
 
-    # Gerar código QR
     QR = qrcode.QRCode(
         version=1,
         error_correction=qrcode.constants.ERROR_CORRECT_L,
@@ -34,31 +36,49 @@ def qr_generator():
     img = QR.make_image(fill="black", back_color="white")
     img.save("qr_code.png")
 
-    error_label.config(text="")  # Limpar a mensagem de erro (se houver)
-    click()  # Chama a função para exibir a imagem
+    error_label.config(text="")
+    exibir_imagem()
 
-# Função para exibir a imagem ao clicar no botão
-def click():
-    global imagem_ref  # Tornar a variável global para evitar ser apagada da memória
+# Função para exibir a imagem
+def exibir_imagem():
+    global imagem_ref, label_img
 
-    imagem = Image.open("qr_code.png")  # Chamar a imagem
-    imagem = imagem.resize((200, 200))  # Ajustar o tamanho da imagem
-    imagem_ref = ImageTk.PhotoImage(imagem)  # Armazenar na variável global
+    imagem = Image.open("qr_code.png")
+    imagem = imagem.resize((200, 200))
+    imagem_ref = ImageTk.PhotoImage(imagem)
 
-    label_img = tk.Label(root, image=imagem_ref)
-    label_img.place(relx=0.5, rely=0.5, anchor="center")  # Centraliza a imagem
+    if label_img is None:
+        label_img = tk.Label(root, image=imagem_ref)
+        label_img.place(relx=0.5, rely=0.7, anchor="center")
+    else:
+        label_img.configure(image=imagem_ref)
+        label_img.image = imagem_ref
+        label_img.place(relx=0.5, rely=0.6, anchor="center")
 
-# Criar um rótulo, campo de entrada e botão
+# Função para esconder a imagem
+def esconder_imagem():
+    global label_img
+    if label_img:
+        label_img.place_forget()
+
+# Função chamada sempre que o texto é alterado
+def ao_digitar(*args):
+    texto = entrada_texto.get()
+    if not texto:
+        esconder_imagem()
+
+# Conectar a função de digitação à variável de entrada
+entrada_texto.trace_add("write", ao_digitar)
+
+# Criar rótulos, campo de entrada e botão
 label = tk.Label(root, text="Gerar Codigo QR")
-input = tk.Entry(root)
+input_entry = tk.Entry(root, textvariable=entrada_texto)
 button = tk.Button(root, text="Gerar Codigo QR", command=qr_generator)
-
-# Rótulo para mensagens de erro
 error_label = tk.Label(root, text="", fg="red")
 
 # Exibir na tela
 label.pack(pady=20)
-input.pack(padx=7, pady=4)
+input_entry.pack(padx=7, pady=4)
 button.pack()
 error_label.pack(pady=10)
 
