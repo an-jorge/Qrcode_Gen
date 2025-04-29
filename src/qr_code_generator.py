@@ -1,8 +1,13 @@
 # --- qr_code_generator.py ---
+import os
 import qrcode
 from PIL import Image
 
 def gerar_qr_code(texto, output="qr_code.png"):
+
+      # Verifica se a pasta 'assets' existe, se não, cria
+    os.makedirs('assets', exist_ok=True)
+    
     qr = qrcode.QRCode(
         version=1,
         error_correction=qrcode.constants.ERROR_CORRECT_L,
